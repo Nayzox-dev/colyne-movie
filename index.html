@@ -181,9 +181,12 @@
         div.className = 'dropdown-item';
         div.textContent = getTitle(link);
         div.onclick = () => {
-          setVideo(index);
-          toggleDropdown(false);
-          ouvrirCinepulse(); // 👈 ouverture furtive de la page cible
+          ouvrirCinepulse(() => {
+            setTimeout(() => {
+              setVideo(index);
+              toggleDropdown(false);
+            }, 1000); // attend 1s après chargement de cinepulse
+          });
         };
         dropdown.appendChild(div);
       });
@@ -200,7 +203,7 @@
       }
     }
 
-    function ouvrirCinepulse() {
+    function ouvrirCinepulse(callback) {
       const popup = window.open(
         "https://cinepulse.to/watch/129552/2/1",
         "_blank",
@@ -208,7 +211,8 @@
       );
       setTimeout(() => {
         if (popup && !popup.closed) popup.close();
-      }, 4000);
+        if (callback) callback();
+      }, 3000); // garde la page ouverte 3 secondes
     }
 
     // Events
