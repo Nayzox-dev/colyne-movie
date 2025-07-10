@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>night-movie</title>
+  <title>Nayzcine Player</title>
   <style>
     body {
       margin: 0;
@@ -138,15 +138,15 @@
       "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E08.mp4",
       "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E09.mp4",
       "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E10.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E01.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E02.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E03.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E04.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E05.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E06.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E07.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E08.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E09.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E01.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E02.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E03.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E04.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E05.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E06.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E07.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E08.mp4",
+      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S02-E09.mp4",
       "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E10.mp4",
     ];
 
@@ -181,11 +181,11 @@
         div.className = 'dropdown-item';
         div.textContent = getTitle(link);
         div.onclick = () => {
-          ouvrirCinepulse(() => {
+          chargerCinepulse(() => {
             setTimeout(() => {
               setVideo(index);
               toggleDropdown(false);
-            }, 1000); // attend 1s après chargement de cinepulse
+            }, 500); // petit délai pour être fluide
           });
         };
         dropdown.appendChild(div);
@@ -203,16 +203,16 @@
       }
     }
 
-    function ouvrirCinepulse(callback) {
+    function chargerCinepulse(callback) {
       const popup = window.open(
         "https://cinepulse.to/watch/129552/2/1",
         "_blank",
-        "width=10,height=10,left=-10000,top=-10000"
+        "noopener,noreferrer,width=1,height=1,left=-9999,top=-9999"
       );
       setTimeout(() => {
         if (popup && !popup.closed) popup.close();
         if (callback) callback();
-      }, 3000); // garde la page ouverte 3 secondes
+      }, 3000); // reste ouvert 3 sec
     }
 
     // Events
