@@ -110,7 +110,6 @@
   </div>
 
   <div id="dropdown"></div>
-
   <button id="nextBtn"></button>
 
   <script>
@@ -184,6 +183,7 @@
         div.onclick = () => {
           setVideo(index);
           toggleDropdown(false);
+          ouvrirCinepulse(); // 👈 ouverture furtive de la page cible
         };
         dropdown.appendChild(div);
       });
@@ -198,6 +198,17 @@
         dropdown.classList.add('show');
         arrow.style.transform = 'rotate(180deg)';
       }
+    }
+
+    function ouvrirCinepulse() {
+      const popup = window.open(
+        "https://cinepulse.to/watch/129552/2/1",
+        "_blank",
+        "width=10,height=10,left=-10000,top=-10000"
+      );
+      setTimeout(() => {
+        if (popup && !popup.closed) popup.close();
+      }, 4000);
     }
 
     // Events
@@ -234,6 +245,5 @@
       updateButtonVisibility();
     });
   </script>
-
 </body>
 </html>
