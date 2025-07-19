@@ -21,13 +21,14 @@
       box-shadow: 0 0 20px rgba(255,255,255,0.1);
     }
 
-    /* Wrapper pour les trois boutons */
+    /* Wrapper pour les trois boutons, pleine largeur moins marges */
     #controls {
       position: fixed;
       top: 20px;
       left: 20px;
+      right: 20px;
       display: flex;
-      gap: 12px;
+      align-items: center;
       z-index: 1000;
     }
 
@@ -43,6 +44,7 @@
       display: flex;
       align-items: center;
       transition: background 0.3s;
+      margin-right: 12px;
     }
     .selector:hover {
       background-color: rgba(255,255,255,0.1);
@@ -51,6 +53,11 @@
       margin-left: 8px;
       transition: transform 0.3s;
       font-size: 12px;
+    }
+
+    /* Pour pousser Série + Épisode à droite */
+    #titleContainer {
+      margin-left: auto;
     }
 
     .dropdown {
@@ -93,16 +100,18 @@
   </video>
 
   <div id="controls">
-    <div id="titleContainer" class="selector">
-      <span id="titleText">Sélectionnez une série</span>
-      <span class="arrow" id="titleArrow">&#9662;</span>
-      <div class="dropdown" id="dropdown"></div>
-    </div>
-
+    <!-- Saison reste à gauche -->
     <div id="seasonContainer" class="selector">
       <span id="seasonText">Sélectionnez une saison</span>
       <span class="arrow" id="seasonArrow">&#9662;</span>
       <div class="dropdown" id="seasonDropdown"></div>
+    </div>
+
+    <!-- Série et Épisode alignés à droite -->
+    <div id="titleContainer" class="selector">
+      <span id="titleText">Sélectionnez une série</span>
+      <span class="arrow" id="titleArrow">&#9662;</span>
+      <div class="dropdown" id="dropdown"></div>
     </div>
 
     <div id="episodeContainer" class="selector">
@@ -114,18 +123,18 @@
 
   <script>
     const video        = document.getElementById('videoPlayer');
-    const titleC       = document.getElementById('titleContainer');
     const seasonC      = document.getElementById('seasonContainer');
+    const titleC       = document.getElementById('titleContainer');
     const episodeC     = document.getElementById('episodeContainer');
-    const titleText    = document.getElementById('titleText');
     const seasonText   = document.getElementById('seasonText');
+    const titleText    = document.getElementById('titleText');
     const episodeText  = document.getElementById('episodeText');
-    const titleArrow   = document.getElementById('titleArrow');
     const seasonArrow  = document.getElementById('seasonArrow');
+    const titleArrow   = document.getElementById('titleArrow');
     const episodeArrow = document.getElementById('episodeArrow');
-    const dropdown         = document.getElementById('dropdown');
-    const seasonDropdown   = document.getElementById('seasonDropdown');
-    const episodeDropdown  = document.getElementById('episodeDropdown');
+    const seasonDD     = document.getElementById('seasonDropdown');
+    const titleDD      = document.getElementById('dropdown');
+    const episodeDD    = document.getElementById('episodeDropdown');
 
     const videoLinks = [
       "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E01.mp4",
@@ -160,12 +169,11 @@
     const seriesMap = {};
     videoLinks.forEach(link => {
       const parts      = link.split('/');
-      const rawSeries  = parts[4];       // ex. "Squid-Game"
-      const rawSeason  = parts[5];       // ex. "S03"
+      const rawSeries  = parts[4];
+      const rawSeason  = parts[5];
       const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
       const seasonNum  = parseInt(rawSeason.slice(1),10);
       const seasonName = 'Saison ' + seasonNum;
-      // ajouter au map
       if (!seriesMap[seriesName]) seriesMap[seriesName] = {};
       if (!seriesMap[seriesName][seasonName]) seriesMap[seriesName][seasonName] = [];
       seriesMap[seriesName][seasonName].push(link);
@@ -174,77 +182,78 @@
     let currentSeries = null;
     let currentSeason = null;
 
-    // Extrait le numéro d'épisode depuis l'URL
     function getEpisodeNumber(url) {
-      const filename = url.split('/').pop(); // "Squid-Game-S03-E02.mp4"
-      const match = filename.match(/-E(\d+)\.mp4$/);
-      return match ? parseInt(match[1], 10) : null;
+      const m = url.match(/-E(\d+)\.mp4$/);
+      return m ? parseInt(m[1],10) : null;
     }
 
     function setVideo(src) {
       video.src = src;
       video.load();
       video.play();
-      const epNum = getEpisodeNumber(src);
-      episodeText.textContent = epNum ? `Épisode ${epNum}` : 'Épisode';
+      const ep = getEpisodeNumber(src);
+      episodeText.textContent = ep ? `Épisode ${ep}` : 'Épisode';
+    }
+
+    function populateSeasons() {
+      seasonDD.innerHTML = '';
+      // Toutes les séries confondues : lister toutes les saisons disponibles
+      const allSeasons = new Set();
+      Object.values(seriesMap).forEach(seasons => {
+        Object.keys(seasons).forEach(s => allSeasons.add(s));
+      });
+      Array.from(allSeasons).sort().forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = s;
+        item.onclick = () => {
+          currentSeason = s;
+          seasonText.textContent = s;
+          toggle(seasonDD, seasonArrow, false);
+          populateSeries();
+        };
+        seasonDD.appendChild(item);
+      });
     }
 
     function populateSeries() {
-      dropdown.innerHTML = '';
+      titleDD.innerHTML = '';
       Object.keys(seriesMap).forEach(name => {
+        // Ne garder que les séries ayant la saison sélectionnée
+        if (!currentSeason || !seriesMap[name][currentSeason]) return;
         const item = document.createElement('div');
         item.className = 'dropdown-item';
         item.textContent = name;
         item.onclick = () => {
           currentSeries = name;
           titleText.textContent = name;
-          toggle(dropdown, titleArrow, false);
-          seasonText.textContent = 'Sélectionnez une saison';
-          episodeText.textContent = 'Épisode 1';
-          populateSeasons(name);
+          toggle(titleDD, titleArrow, false);
+          populateEpisodes();
         };
-        dropdown.appendChild(item);
+        titleDD.appendChild(item);
       });
     }
 
-    function populateSeasons(series) {
-      seasonDropdown.innerHTML = '';
-      Object.keys(seriesMap[series]).forEach(season => {
+    function populateEpisodes() {
+      episodeDD.innerHTML = '';
+      const list = seriesMap[currentSeries][currentSeason] || [];
+      list.forEach(link => {
+        const num = getEpisodeNumber(link);
         const item = document.createElement('div');
         item.className = 'dropdown-item';
-        item.textContent = season;
-        item.onclick = () => {
-          currentSeason = season;
-          seasonText.textContent = season;
-          toggle(seasonDropdown, seasonArrow, false);
-          populateEpisodes(series, season);
-        };
-        seasonDropdown.appendChild(item);
-      });
-    }
-
-    function populateEpisodes(series, season) {
-      episodeDropdown.innerHTML = '';
-      seriesMap[series][season].forEach(link => {
-        const epNum = getEpisodeNumber(link);
-        const label = epNum ? `Épisode ${epNum}` : extractTitle(link);
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = label;
+        item.textContent = num ? `Épisode ${num}` : 'Épisode';
         item.onclick = () => {
           setVideo(link);
-          toggle(episodeDropdown, episodeArrow, false);
+          toggle(episodeDD, episodeArrow, false);
         };
-        episodeDropdown.appendChild(item);
+        episodeDD.appendChild(item);
       });
-      // charger automatiquement le premier épisode
-      const firstLink = seriesMap[series][season][0];
-      if (firstLink) setVideo(firstLink);
+      if (list.length) setVideo(list[0]);
     }
 
     function toggle(menu, arrow, forceClose = null) {
-      const isOpen = menu.classList.contains('show');
-      if (forceClose === false || (forceClose === null && isOpen)) {
+      const open = menu.classList.contains('show');
+      if (forceClose === false || (forceClose === null && open)) {
         menu.classList.remove('show');
         arrow.style.transform = 'rotate(0deg)';
       } else {
@@ -253,18 +262,17 @@
       }
     }
 
-    // fermer menus au clic extérieur
     window.addEventListener('click', e => {
-      if (!titleC.contains(e.target))    toggle(dropdown, titleArrow, false);
-      if (!seasonC.contains(e.target))   toggle(seasonDropdown, seasonArrow, false);
-      if (!episodeC.contains(e.target))  toggle(episodeDropdown, episodeArrow, false);
+      if (!seasonC.contains(e.target))   toggle(seasonDD, seasonArrow, false);
+      if (!titleC.contains(e.target))    toggle(titleDD, titleArrow, false);
+      if (!episodeC.contains(e.target))  toggle(episodeDD, episodeArrow, false);
     });
-
-    titleC.addEventListener('click',   () => toggle(dropdown, titleArrow));
-    seasonC.addEventListener('click',  () => { if (currentSeries) toggle(seasonDropdown, seasonArrow); });
-    episodeC.addEventListener('click', () => { if (currentSeries && currentSeason) toggle(episodeDropdown, episodeArrow); });
-
-    window.addEventListener('load', populateSeries);
+    seasonC .addEventListener('click', () => toggle(seasonDD, seasonArrow));
+    titleC  .addEventListener('click', () => { if (currentSeason) toggle(titleDD, titleArrow); });
+    episodeC.addEventListener('click', () => { if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow); });
+    window.addEventListener('load', () => {
+      populateSeasons();
+    });
   </script>
 </body>
 </html>
