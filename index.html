@@ -176,14 +176,18 @@
       "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E010.mp4",
     ];
 
-    // --- Construire la map Série → Saison → Liens ---
+    // --- Construire la map Série → Saison → Liens, et Film comme "Film" saison ---
     const seriesMap = {};
+    function extractTitle(url) {
+      return decodeURIComponent(
+        url.split('/').pop().replace('.mp4','').replace(/-/g,' ')
+      );
+    }
     videoLinks.forEach(link => {
       const parts = link.split('/');
       const type  = parts[3]; // "series" ou "movies"
 
       if (type === 'series') {
-        // /series/{serie}/{saison}/{fichier}.mp4
         const rawSeries = parts[4];
         const rawSeason = parts[5];
         const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
@@ -194,12 +198,8 @@
         seriesMap[seriesName][seasonName].push(link);
 
       } else if (type === 'movies') {
-        // /movies/{film}.mp4
-        const filename = parts[4]; // ex. "A-contre-sens.mp4"
-        const movieName = decodeURIComponent(
-          filename.replace('.mp4','').replace(/-/g,' ')
-        );
-        const seasonName = 'Film'; // saison unique
+        const movieName = extractTitle(link);
+        const seasonName = 'Film';
         seriesMap[movieName] = seriesMap[movieName] || {};
         seriesMap[movieName][seasonName] = seriesMap[movieName][seasonName] || [];
         seriesMap[movieName][seasonName].push(link);
@@ -213,11 +213,7 @@
       const m = url.match(/-E(\d+)\.mp4$/);
       return m ? parseInt(m[1],10) : null;
     }
-    function extractTitle(url) {
-      return decodeURIComponent(
-        url.split('/').pop().replace('.mp4','').replace(/-/g,' ')
-      );
-    }
+
     function setVideo(src) {
       video.src = src;
       video.load();
@@ -238,6 +234,17 @@
           currentSeries = name;
           titleText.textContent = name;
           toggle(titleDD, titleArrow, false);
+
+          // Si c'est un film (une seule "saison" Film), on lance direct
+          const seasons = Object.keys(seriesMap[name]);
+          if (seasons.length === 1 && seasons[0] === 'Film') {
+            const link = seriesMap[name]['Film'][0];
+            seasonText.textContent = 'Film';
+            setVideo(link);
+            return;
+          }
+
+          // Sinon, on réinitialise et on affiche les saisons
           seasonText.textContent = 'Sélectionnez une saison';
           episodeText.textContent = 'Sélectionnez un épisode';
           populateSeasons(name);
@@ -249,16 +256,16 @@
     function populateSeasons(series) {
       seasonDD.innerHTML = '';
       Object.keys(seriesMap[series]).forEach(season => {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = season;
-        item.onclick = () => {
+        const it = document.createElement('div');
+        it.className = 'dropdown-item';
+        it.textContent = season;
+        it.onclick = () => {
           currentSeason = season;
           seasonText.textContent = season;
           toggle(seasonDD, seasonArrow, false);
           populateEpisodes();
         };
-        seasonDD.appendChild(item);
+        seasonDD.appendChild(it);
       });
     }
 
@@ -267,17 +274,15 @@
       const list = seriesMap[currentSeries][currentSeason] || [];
       list.forEach(link => {
         const num = getEpisodeNumber(link);
-        const label = num
-          ? `Épisode ${num}`
-          : extractTitle(link);
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = label;
-        item.onclick = () => {
+        const label = num ? `Épisode ${num}` : extractTitle(link);
+        const it = document.createElement('div');
+        it.className = 'dropdown-item';
+        it.textContent = label;
+        it.onclick = () => {
           setVideo(link);
           toggle(episodeDD, episodeArrow, false);
         };
-        episodeDD.appendChild(item);
+        episodeDD.appendChild(it);
       });
       if (list.length) setVideo(list[0]);
     }
@@ -293,7 +298,7 @@
       }
     }
 
-    // Fermer au clic extérieur
+    // fermer au clic extérieur
     window.addEventListener('click', e => {
       if (!titleC.contains(e.target))   toggle(titleDD, titleArrow, false);
       if (!seasonC.contains(e.target))  toggle(seasonDD, seasonArrow, false);
