@@ -21,51 +21,39 @@
       box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
     }
 
-    #nextBtn, #titleContainer {
+    /* Conteneurs de sélection */
+    #titleContainer, #episodeContainer {
       position: fixed;
       top: 20px;
       padding: 10px 18px;
       background-color: rgba(255, 255, 255, 0.05);
       color: white;
-      border: none;
       border-radius: 12px;
       backdrop-filter: blur(8px);
       font-size: 14px;
       z-index: 1000;
       display: flex;
       align-items: center;
-    }
-
-    #nextBtn {
-      right: 20px;
-      cursor: pointer;
-      display: none;
-    }
-
-    #titleContainer {
-      left: 20px;
       cursor: pointer;
       transition: background 0.3s ease;
     }
-
-    #titleContainer:hover {
+    #titleContainer:hover, #episodeContainer:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
+    #titleContainer { left: 20px; }
+    #episodeContainer { right: 20px; }
 
-    #titleText {
-      margin-right: 10px;
-      white-space: nowrap;
-    }
-
-    #arrow {
+    /* Flèches */
+    #arrow, #episodeArrow {
+      margin-left: 8px;
       transition: transform 0.3s ease;
       font-size: 12px;
     }
 
-    #dropdown {
+    /* Dropdowns */
+    .dropdown {
       position: fixed;
       top: 60px;
-      left: 20px;
       background: rgba(0, 0, 0, 0.95);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 10px;
@@ -77,12 +65,13 @@
       transition: opacity 0.3s ease, transform 0.3s ease;
       z-index: 999;
     }
-
-    #dropdown.show {
+    .dropdown.show {
       opacity: 1;
       transform: translateY(0);
       pointer-events: auto;
     }
+    #dropdown { left: 20px; }
+    #episodeDropdown { right: 20px; }
 
     .dropdown-item {
       padding: 12px 16px;
@@ -91,7 +80,6 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-
     .dropdown-item:hover {
       background-color: rgba(255, 255, 255, 0.08);
     }
@@ -105,21 +93,29 @@
   </video>
 
   <div id="titleContainer">
-    <span id="titleText"></span>
+    <span id="titleText">Sélectionnez une série</span>
     <span id="arrow">&#9662;</span>
   </div>
 
-  <div id="dropdown"></div>
-  <button id="nextBtn"></button>
+  <div id="episodeContainer">
+    <span id="episodeText">Choisissez un épisode</span>
+    <span id="episodeArrow">&#9662;</span>
+  </div>
+
+  <div id="dropdown" class="dropdown"></div>
+  <div id="episodeDropdown" class="dropdown"></div>
 
   <script>
     const video = document.getElementById('videoPlayer');
-    const nextBtn = document.getElementById('nextBtn');
+    const titleContainer = document.getElementById('titleContainer');
     const titleText = document.getElementById('titleText');
     const arrow = document.getElementById('arrow');
-    const titleContainer = document.getElementById('titleContainer');
     const dropdown = document.getElementById('dropdown');
-    const STORAGE_KEY = 'video_la_main_position';
+
+    const episodeContainer = document.getElementById('episodeContainer');
+    const episodeText = document.getElementById('episodeText');
+    const episodeArrow = document.getElementById('episodeArrow');
+    const episodeDropdown = document.getElementById('episodeDropdown');
 
     const videoLinks = [
       "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E01.mp4",
@@ -150,51 +146,70 @@
       "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E10.mp4",
     ];
 
-    let currentIndex = 0;
+    // Regroupe par série
+    const seriesMap = {};
+    videoLinks.forEach(link => {
+      const parts = link.split('/');
+      const raw = parts[4];                      // 'Squid-Game' ou 'The-Night-Agent'
+      const seriesName = decodeURIComponent(raw.replace(/-/g, ' '));
+      if (!seriesMap[seriesName]) seriesMap[seriesName] = [];
+      seriesMap[seriesName].push(link);
+    });
 
-    function getTitle(url) {
-      return decodeURIComponent(url.split('/').pop().replace('.mp4', '').replace(/-/g, ' '));
+    let currentSeries = null;
+
+    function getEpisodeTitle(url) {
+      return decodeURIComponent(
+        url.split('/').pop()
+           .replace('.mp4','')
+           .replace(/-/g,' ')
+      );
     }
 
-    function setVideo(index) {
-      currentIndex = index;
-      const url = videoLinks[index];
-      video.src = url;
+    function setVideoByLink(link) {
+      video.src = link;
       video.load();
       video.play();
-      titleText.textContent = getTitle(url);
-      nextBtn.textContent = `Film Suivant ${index + 1}/${videoLinks.length}`;
+      episodeText.textContent = getEpisodeTitle(link);
     }
 
-    function updateButtonVisibility() {
-      if (!document.fullscreenElement && videoLinks.length > 1) {
-        nextBtn.style.display = 'flex';
-      } else {
-        nextBtn.style.display = 'none';
-      }
-    }
-
-    function populateDropdown() {
+    function populateSeriesDropdown() {
       dropdown.innerHTML = '';
-      videoLinks.forEach((link, index) => {
-        const div = document.createElement('div');
-        div.className = 'dropdown-item';
-        div.textContent = getTitle(link);
-        div.onclick = () => {
-          chargerCinepulse(() => {
-            setTimeout(() => {
-              setVideo(index);
-              toggleDropdown(false);
-            }, 500); // petit délai pour être fluide
-          });
+      Object.keys(seriesMap).forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = name;
+        item.onclick = () => {
+          currentSeries = name;
+          titleText.textContent = name;
+          toggleDropdown(false);
+          populateEpisodeDropdown(name);
         };
-        dropdown.appendChild(div);
+        dropdown.appendChild(item);
       });
     }
 
+    function populateEpisodeDropdown(name) {
+      episodeDropdown.innerHTML = '';
+      seriesMap[name].forEach(link => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = getEpisodeTitle(link);
+        item.onclick = () => {
+          setVideoByLink(link);
+          toggleEpisodeDropdown(false);
+        };
+        episodeDropdown.appendChild(item);
+      });
+      // pré-sélection du premier épisode
+      if (seriesMap[name].length) {
+        setVideoByLink(seriesMap[name][0]);
+      }
+    }
+
     function toggleDropdown(forceClose = null) {
-      const isOpen = dropdown.classList.contains('show');
-      if (forceClose === false || (forceClose === null && isOpen)) {
+      const open = dropdown.classList.contains('show');
+      if (forceClose===false || (forceClose===null && open)) {
         dropdown.classList.remove('show');
         arrow.style.transform = 'rotate(0deg)';
       } else {
@@ -203,50 +218,31 @@
       }
     }
 
-    function chargerCinepulse(callback) {
-      const popup = window.open(
-        "https://cinepulse.to/watch/129552/2/1",
-        "_blank",
-        "noopener,noreferrer,width=1,height=1,left=-9999,top=-9999"
-      );
-      setTimeout(() => {
-        if (popup && !popup.closed) popup.close();
-        if (callback) callback();
-      }, 3000); // reste ouvert 3 sec
+    function toggleEpisodeDropdown(forceClose = null) {
+      const open = episodeDropdown.classList.contains('show');
+      if (forceClose===false || (forceClose===null && open)) {
+        episodeDropdown.classList.remove('show');
+        episodeArrow.style.transform = 'rotate(0deg)';
+      } else {
+        episodeDropdown.classList.add('show');
+        episodeArrow.style.transform = 'rotate(180deg)';
+      }
     }
 
-    // Events
-    window.addEventListener('click', (e) => {
-      if (!titleContainer.contains(e.target)) {
-        toggleDropdown(false);
-      }
+    // Ferme les dropdowns si clic à l'extérieur
+    window.addEventListener('click', e => {
+      if (!titleContainer.contains(e.target))  toggleDropdown(false);
+      if (!episodeContainer.contains(e.target)) toggleEpisodeDropdown(false);
     });
 
     titleContainer.addEventListener('click', () => toggleDropdown());
-
-    nextBtn.addEventListener('click', () => {
-      currentIndex = (currentIndex + 1) % videoLinks.length;
-      setVideo(currentIndex);
-    });
-
-    document.addEventListener('fullscreenchange', updateButtonVisibility);
-    window.addEventListener('resize', updateButtonVisibility);
-
-    video.addEventListener('loadedmetadata', () => {
-      const savedTime = localStorage.getItem(STORAGE_KEY);
-      if (savedTime) {
-        video.currentTime = parseFloat(savedTime);
-      }
-    });
-
-    video.addEventListener('timeupdate', () => {
-      localStorage.setItem(STORAGE_KEY, video.currentTime);
+    episodeContainer.addEventListener('click', () => {
+      if (!currentSeries) return;
+      toggleEpisodeDropdown();
     });
 
     window.addEventListener('load', () => {
-      populateDropdown();
-      setVideo(currentIndex);
-      updateButtonVisibility();
+      populateSeriesDropdown();
     });
   </script>
 </body>
