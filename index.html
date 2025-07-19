@@ -15,27 +15,13 @@
       font-family: 'Segoe UI', sans-serif;
     }
 
-    /* Positionnement conteneur vidéos */
-    #videoWrapper {
-      position: relative;
-      width: 80%;
-      max-width: 960px;
-    }
-
     video {
-      width: 100%;
-      height: auto;
-      display: block;
+      max-width: 100%;
+      max-height: 100%;
       box-shadow: 0 0 20px rgba(255,255,255,0.1);
-      background: #000;
     }
 
-    /* Cacher un player */
-    .hidden {
-      display: none;
-    }
-
-    /* Controls (saison / série / épisode) */
+    /* Wrapper pour les trois boutons, pleine largeur moins marges */
     #controls {
       position: fixed;
       top: 20px;
@@ -45,6 +31,7 @@
       align-items: center;
       z-index: 1000;
     }
+
     .selector {
       position: relative;
       padding: 10px 18px;
@@ -56,8 +43,8 @@
       cursor: pointer;
       display: flex;
       align-items: center;
-      margin-right: 12px;
       transition: background 0.3s;
+      margin-right: 12px;
     }
     .selector:hover {
       background-color: rgba(255,255,255,0.1);
@@ -67,10 +54,15 @@
       transition: transform 0.3s;
       font-size: 12px;
     }
-    #titleContainer { margin-left: auto; }
+
+    /* Pour pousser Série + Épisode à droite */
+    #titleContainer {
+      margin-left: auto;
+    }
+
     .dropdown {
       position: absolute;
-      top: calc(100% + 6px);
+      top: calc(100% + 8px);
       left: 0;
       background: rgba(0,0,0,0.95);
       border: 1px solid rgba(255,255,255,0.15);
@@ -102,28 +94,24 @@
 </head>
 <body>
 
-  <div id="videoWrapper">
-    <!-- Player intro : pas de contrôles -->
-    <video id="introPlayer" class="hidden" preload="auto">
-      <source src="intro.mp4" type="video/mp4">
-    </video>
-    <!-- Player principal -->
-    <video id="mainPlayer" controls preload="auto">
-      <source src="" type="video/mp4">
-    </video>
-  </div>
+  <video id="videoPlayer" controls>
+    <source src="" type="video/mp4">
+    Votre navigateur ne supporte pas la balise vidéo.
+  </video>
 
   <div id="controls">
+    <!-- Saison reste à gauche -->
     <div id="seasonContainer" class="selector">
       <span id="seasonText">Sélectionnez une saison</span>
       <span class="arrow" id="seasonArrow">&#9662;</span>
       <div class="dropdown" id="seasonDropdown"></div>
     </div>
 
+    <!-- Série et Épisode alignés à droite -->
     <div id="titleContainer" class="selector">
       <span id="titleText">Sélectionnez une série</span>
       <span class="arrow" id="titleArrow">&#9662;</span>
-      <div class="dropdown" id="titleDropdown"></div>
+      <div class="dropdown" id="dropdown"></div>
     </div>
 
     <div id="episodeContainer" class="selector">
@@ -134,26 +122,20 @@
   </div>
 
   <script>
-    const introPlayer = document.getElementById('introPlayer');
-    const mainPlayer  = document.getElementById('mainPlayer');
+    const video        = document.getElementById('videoPlayer');
+    const seasonC      = document.getElementById('seasonContainer');
+    const titleC       = document.getElementById('titleContainer');
+    const episodeC     = document.getElementById('episodeContainer');
+    const seasonText   = document.getElementById('seasonText');
+    const titleText    = document.getElementById('titleText');
+    const episodeText  = document.getElementById('episodeText');
+    const seasonArrow  = document.getElementById('seasonArrow');
+    const titleArrow   = document.getElementById('titleArrow');
+    const episodeArrow = document.getElementById('episodeArrow');
+    const seasonDD     = document.getElementById('seasonDropdown');
+    const titleDD      = document.getElementById('dropdown');
+    const episodeDD    = document.getElementById('episodeDropdown');
 
-    const seasonC     = document.getElementById('seasonContainer');
-    const titleC      = document.getElementById('titleContainer');
-    const episodeC    = document.getElementById('episodeContainer');
-
-    const seasonText  = document.getElementById('seasonText');
-    const titleText   = document.getElementById('titleText');
-    const episodeText = document.getElementById('episodeText');
-
-    const seasonArrow   = document.getElementById('seasonArrow');
-    const titleArrow    = document.getElementById('titleArrow');
-    const episodeArrow  = document.getElementById('episodeArrow');
-
-    const seasonDD   = document.getElementById('seasonDropdown');
-    const titleDD    = document.getElementById('titleDropdown');
-    const episodeDD  = document.getElementById('episodeDropdown');
-
-    // Vos liens vidéo
     const videoLinks = [
       "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E01.mp4",
       "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E02.mp4",
@@ -192,46 +174,30 @@
       const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
       const seasonNum  = parseInt(rawSeason.slice(1),10);
       const seasonName = 'Saison ' + seasonNum;
-      seriesMap[seriesName] = seriesMap[seriesName] || {};
-      seriesMap[seriesName][seasonName] = seriesMap[seriesName][seasonName] || [];
+      if (!seriesMap[seriesName]) seriesMap[seriesName] = {};
+      if (!seriesMap[seriesName][seasonName]) seriesMap[seriesName][seasonName] = [];
       seriesMap[seriesName][seasonName].push(link);
     });
 
-    let currentSeason = null;
     let currentSeries = null;
+    let currentSeason = null;
 
     function getEpisodeNumber(url) {
       const m = url.match(/-E(\d+)\.mp4$/);
       return m ? parseInt(m[1],10) : null;
     }
 
-    // Lit l'intro puis bascule sur la vidéo principale
-    function playWithIntro(src) {
-      // 1) Pré‑charger la vidéo principale
-      mainPlayer.src = src;
-      mainPlayer.load();
-      // 2) Pré‑charger et afficher l'intro
-      introPlayer.classList.remove('hidden');
-      mainPlayer.classList.add('hidden');
-      introPlayer.currentTime = 0;
-      introPlayer.play();
-    }
-
-    // Dès que l'intro est terminée, on passe à la vidéo principale
-    introPlayer.addEventListener('ended', () => {
-      introPlayer.classList.add('hidden');
-      mainPlayer.classList.remove('hidden');
-      mainPlayer.play();
-    });
-
-    function setEpisode(link) {
-      const num = getEpisodeNumber(link);
-      episodeText.textContent = num ? `Épisode ${num}` : 'Épisode';
-      playWithIntro(link);
+    function setVideo(src) {
+      video.src = src;
+      video.load();
+      video.play();
+      const ep = getEpisodeNumber(src);
+      episodeText.textContent = ep ? `Épisode ${ep}` : 'Épisode';
     }
 
     function populateSeasons() {
       seasonDD.innerHTML = '';
+      // Toutes les séries confondues : lister toutes les saisons disponibles
       const allSeasons = new Set();
       Object.values(seriesMap).forEach(seasons => {
         Object.keys(seasons).forEach(s => allSeasons.add(s));
@@ -253,7 +219,8 @@
     function populateSeries() {
       titleDD.innerHTML = '';
       Object.keys(seriesMap).forEach(name => {
-        if (!seriesMap[name][currentSeason]) return;
+        // Ne garder que les séries ayant la saison sélectionnée
+        if (!currentSeason || !seriesMap[name][currentSeason]) return;
         const item = document.createElement('div');
         item.className = 'dropdown-item';
         item.textContent = name;
@@ -276,18 +243,17 @@
         item.className = 'dropdown-item';
         item.textContent = num ? `Épisode ${num}` : 'Épisode';
         item.onclick = () => {
+          setVideo(link);
           toggle(episodeDD, episodeArrow, false);
-          setEpisode(link);
         };
         episodeDD.appendChild(item);
       });
-      // charger automatiquement le premier épisode
-      if (list.length) setEpisode(list[0]);
+      if (list.length) setVideo(list[0]);
     }
 
     function toggle(menu, arrow, forceClose = null) {
       const open = menu.classList.contains('show');
-      if (forceClose===false || (forceClose===null && open)) {
+      if (forceClose === false || (forceClose === null && open)) {
         menu.classList.remove('show');
         arrow.style.transform = 'rotate(0deg)';
       } else {
@@ -296,17 +262,17 @@
       }
     }
 
-    // Fermeture au clic en dehors
     window.addEventListener('click', e => {
-      if (!seasonC.contains(e.target))  toggle(seasonDD, seasonArrow, false);
-      if (!titleC.contains(e.target))   toggle(titleDD, titleArrow, false);
-      if (!episodeC.contains(e.target)) toggle(episodeDD, episodeArrow, false);
+      if (!seasonC.contains(e.target))   toggle(seasonDD, seasonArrow, false);
+      if (!titleC.contains(e.target))    toggle(titleDD, titleArrow, false);
+      if (!episodeC.contains(e.target))  toggle(episodeDD, episodeArrow, false);
     });
     seasonC .addEventListener('click', () => toggle(seasonDD, seasonArrow));
     titleC  .addEventListener('click', () => { if (currentSeason) toggle(titleDD, titleArrow); });
     episodeC.addEventListener('click', () => { if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow); });
-
-    window.addEventListener('load', populateSeasons);
+    window.addEventListener('load', () => {
+      populateSeasons();
+    });
   </script>
 </body>
 </html>
