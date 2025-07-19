@@ -14,101 +14,52 @@
       height: 100vh;
       font-family: 'Segoe UI', sans-serif;
     }
-
     video {
       max-width: 100%;
       max-height: 100%;
       box-shadow: 0 0 20px rgba(255,255,255,0.1);
     }
 
-    /* Bouton Série (gauche) */
+    /* Série (gauche) */
     #titleContainer {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      padding: 10px 18px;
-      background-color: rgba(255,255,255,0.05);
-      color: white;
-      border-radius: 12px;
-      backdrop-filter: blur(8px);
-      font-size: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      transition: background 0.3s;
-      z-index: 1000;
+      position: fixed; top: 20px; left: 20px;
+      padding: 10px 18px; background: rgba(255,255,255,0.05);
+      color: #fff; border-radius:12px; backdrop-filter:blur(8px);
+      font-size:14px; cursor:pointer; display:flex; align-items:center;
+      transition:background 0.3s; z-index:1000;
     }
-    #titleContainer:hover {
-      background-color: rgba(255,255,255,0.1);
-    }
-    #titleContainer .arrow {
-      margin-left: 8px;
-      transition: transform 0.3s;
-      font-size: 12px;
-    }
+    #titleContainer:hover { background:rgba(255,255,255,0.1); }
+    #titleContainer .arrow { margin-left:8px; transition:transform 0.3s; }
 
-    /* Wrapper Saison + Épisode (droite) */
+    /* Saison+Épisode (droite) */
     #rightControls {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      gap: 12px;
-      z-index: 1000;
+      position:fixed; top:20px; right:20px;
+      display:flex; gap:12px; z-index:1000;
     }
-
     .selector {
-      position: relative;
-      padding: 10px 18px;
-      background-color: rgba(255,255,255,0.05);
-      color: white;
-      border-radius: 12px;
-      backdrop-filter: blur(8px);
-      font-size: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      transition: background 0.3s;
+      position:relative; padding:10px 18px;
+      background:rgba(255,255,255,0.05); color:#fff;
+      border-radius:12px; backdrop-filter:blur(8px);
+      font-size:14px; cursor:pointer; display:flex;
+      align-items:center; transition:background 0.3s;
     }
-    .selector:hover {
-      background-color: rgba(255,255,255,0.1);
-    }
-    .selector .arrow {
-      margin-left: 8px;
-      transition: transform 0.3s;
-      font-size: 12px;
-    }
+    .selector:hover { background:rgba(255,255,255,0.1); }
+    .selector .arrow { margin-left:8px; transition:transform 0.3s; }
 
     .dropdown {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      background: rgba(0,0,0,0.95);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 10px;
-      overflow: hidden;
-      min-width: 200px;
-      opacity: 0;
-      transform: translateY(-10px);
-      pointer-events: none;
-      transition: opacity 0.3s, transform 0.3s;
-      z-index: 999;
+      position:absolute; top:calc(100% + 8px); left:0;
+      background:rgba(0,0,0,0.95); border:1px solid rgba(255,255,255,0.15);
+      border-radius:10px; overflow:hidden; min-width:200px;
+      opacity:0; transform:translateY(-10px);
+      pointer-events:none; transition:opacity 0.3s,transform 0.3s;
+      z-index:999;
     }
-    .dropdown.show {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
+    .dropdown.show { opacity:1; transform:translateY(0); pointer-events:auto; }
     .dropdown-item {
-      padding: 12px 16px;
-      color: white;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
+      padding:12px 16px; color:#fff; font-size:14px;
+      cursor:pointer; transition:background 0.2s;
     }
-    .dropdown-item:hover {
-      background-color: rgba(255,255,255,0.08);
-    }
+    .dropdown-item:hover { background:rgba(255,255,255,0.08); }
   </style>
 </head>
 <body>
@@ -140,19 +91,19 @@
   </div>
 
   <script>
-    const video         = document.getElementById('videoPlayer');
-    const titleC        = document.getElementById('titleContainer');
-    const seasonC       = document.getElementById('seasonContainer');
-    const episodeC      = document.getElementById('episodeContainer');
-    const titleText     = document.getElementById('titleText');
-    const seasonText    = document.getElementById('seasonText');
-    const episodeText   = document.getElementById('episodeText');
-    const titleArrow    = document.getElementById('titleArrow');
-    const seasonArrow   = document.getElementById('seasonArrow');
-    const episodeArrow  = document.getElementById('episodeArrow');
-    const titleDD       = document.getElementById('titleDropdown');
-    const seasonDD      = document.getElementById('seasonDropdown');
-    const episodeDD     = document.getElementById('episodeDropdown');
+    const video       = document.getElementById('videoPlayer');
+    const titleC      = document.getElementById('titleContainer');
+    const seasonC     = document.getElementById('seasonContainer');
+    const episodeC    = document.getElementById('episodeContainer');
+    const titleText   = document.getElementById('titleText');
+    const seasonText  = document.getElementById('seasonText');
+    const episodeText = document.getElementById('episodeText');
+    const titleArrow  = document.getElementById('titleArrow');
+    const seasonArrow = document.getElementById('seasonArrow');
+    const episodeArrow= document.getElementById('episodeArrow');
+    const titleDD     = document.getElementById('titleDropdown');
+    const seasonDD    = document.getElementById('seasonDropdown');
+    const episodeDD   = document.getElementById('episodeDropdown');
 
     const videoLinks = [
       "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E01.mp4",
@@ -226,17 +177,19 @@
       "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E010.mp4",
     ];
 
-    // Construire la hiérarchie Série → Saison → Épisodes
+    // --- On ne garde QUE les URLs de séries ---
     const seriesMap = {};
     videoLinks.forEach(link => {
+      // n'inclure que celles qui ont "/series/" dans le chemin
+      if (!link.includes('/series/')) return;
       const parts      = link.split('/');
-      const rawSeries  = parts[4];
-      const rawSeason  = parts[5];
+      const rawSeries  = parts[4];         // "Squid-Game"
+      const rawSeason  = parts[5];         // "S03"
       const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
       const seasonNum  = parseInt(rawSeason.slice(1),10);
       const seasonName = 'Saison ' + seasonNum;
-      seriesMap[seriesName] = seriesMap[seriesName] || {};
-      seriesMap[seriesName][seasonName] = seriesMap[seriesName][seasonName] || [];
+      if (!seriesMap[seriesName]) seriesMap[seriesName] = {};
+      if (!seriesMap[seriesName][seasonName]) seriesMap[seriesName][seasonName] = [];
       seriesMap[seriesName][seasonName].push(link);
     });
 
@@ -252,8 +205,8 @@
       video.src = src;
       video.load();
       video.play();
-      const ep = getEpisodeNumber(src);
-      episodeText.textContent = ep ? `Épisode ${ep}` : 'Épisode';
+      const num = getEpisodeNumber(src);
+      episodeText.textContent = num ? `Épisode ${num}` : 'Épisode';
     }
 
     function populateSeries() {
@@ -309,7 +262,7 @@
 
     function toggle(menu, arrow, forceClose = null) {
       const open = menu.classList.contains('show');
-      if (forceClose === false || (forceClose === null && open)) {
+      if (forceClose===false || (forceClose===null && open)) {
         menu.classList.remove('show');
         arrow.style.transform = 'rotate(0deg)';
       } else {
@@ -318,16 +271,17 @@
       }
     }
 
-    // Clic extérieur ferme les dropdowns
+    // fermer au clic à l'extérieur
     window.addEventListener('click', e => {
       if (!titleC.contains(e.target))   toggle(titleDD, titleArrow, false);
       if (!seasonC.contains(e.target))  toggle(seasonDD, seasonArrow, false);
       if (!episodeC.contains(e.target)) toggle(episodeDD, episodeArrow, false);
     });
 
-    titleC .addEventListener('click', () => toggle(titleDD, titleArrow));
-    seasonC.addEventListener('click', () => { if (currentSeries) toggle(seasonDD, seasonArrow); });
+    titleC.addEventListener('click',   () => toggle(titleDD, titleArrow));
+    seasonC.addEventListener('click',  () => { if (currentSeries) toggle(seasonDD, seasonArrow); });
     episodeC.addEventListener('click', () => { if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow); });
+
     window.addEventListener('load', populateSeries);
   </script>
 </body>
