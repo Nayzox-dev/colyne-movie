@@ -19,7 +19,6 @@
       max-height: 100%;
       box-shadow: 0 0 20px rgba(255,255,255,0.1);
     }
-
     /* Série (gauche) */
     #titleContainer {
       position: fixed; top: 20px; left: 20px;
@@ -69,14 +68,14 @@
     Votre navigateur ne supporte pas la balise vidéo.
   </video>
 
-  <!-- Série à gauche -->
+  <!-- Sélecteur Série -->
   <div id="titleContainer">
-    <span id="titleText">Sélectionnez une série</span>
+    <span id="titleText">Sélectionnez une série/film</span>
     <span class="arrow" id="titleArrow">&#9662;</span>
     <div class="dropdown" id="titleDropdown"></div>
   </div>
 
-  <!-- Saison + Épisode à droite -->
+  <!-- Sélecteurs Saison + Épisode -->
   <div id="rightControls">
     <div id="seasonContainer" class="selector">
       <span id="seasonText">Sélectionnez une saison</span>
@@ -84,7 +83,7 @@
       <div class="dropdown" id="seasonDropdown"></div>
     </div>
     <div id="episodeContainer" class="selector">
-      <span id="episodeText">Épisode 1</span>
+      <span id="episodeText">Sélectionnez un épisode</span>
       <span class="arrow" id="episodeArrow">&#9662;</span>
       <div class="dropdown" id="episodeDropdown"></div>
     </div>
@@ -177,20 +176,34 @@
       "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E010.mp4",
     ];
 
-    // --- On ne garde QUE les URLs de séries ---
+    // --- Construire la map Série → Saison → Liens ---
     const seriesMap = {};
     videoLinks.forEach(link => {
-      // n'inclure que celles qui ont "/series/" dans le chemin
-      if (!link.includes('/series/')) return;
-      const parts      = link.split('/');
-      const rawSeries  = parts[4];         // "Squid-Game"
-      const rawSeason  = parts[5];         // "S03"
-      const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
-      const seasonNum  = parseInt(rawSeason.slice(1),10);
-      const seasonName = 'Saison ' + seasonNum;
-      if (!seriesMap[seriesName]) seriesMap[seriesName] = {};
-      if (!seriesMap[seriesName][seasonName]) seriesMap[seriesName][seasonName] = [];
-      seriesMap[seriesName][seasonName].push(link);
+      const parts = link.split('/');
+      const type  = parts[3]; // "series" ou "movies"
+
+      if (type === 'series') {
+        // /series/{serie}/{saison}/{fichier}.mp4
+        const rawSeries = parts[4];
+        const rawSeason = parts[5];
+        const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
+        const seasonNum  = parseInt(rawSeason.slice(1),10);
+        const seasonName = 'Saison ' + seasonNum;
+        seriesMap[seriesName] = seriesMap[seriesName] || {};
+        seriesMap[seriesName][seasonName] = seriesMap[seriesName][seasonName] || [];
+        seriesMap[seriesName][seasonName].push(link);
+
+      } else if (type === 'movies') {
+        // /movies/{film}.mp4
+        const filename = parts[4]; // ex. "A-contre-sens.mp4"
+        const movieName = decodeURIComponent(
+          filename.replace('.mp4','').replace(/-/g,' ')
+        );
+        const seasonName = 'Film'; // saison unique
+        seriesMap[movieName] = seriesMap[movieName] || {};
+        seriesMap[movieName][seasonName] = seriesMap[movieName][seasonName] || [];
+        seriesMap[movieName][seasonName].push(link);
+      }
     });
 
     let currentSeries = null;
@@ -200,13 +213,19 @@
       const m = url.match(/-E(\d+)\.mp4$/);
       return m ? parseInt(m[1],10) : null;
     }
-
+    function extractTitle(url) {
+      return decodeURIComponent(
+        url.split('/').pop().replace('.mp4','').replace(/-/g,' ')
+      );
+    }
     function setVideo(src) {
       video.src = src;
       video.load();
       video.play();
       const num = getEpisodeNumber(src);
-      episodeText.textContent = num ? `Épisode ${num}` : 'Épisode';
+      episodeText.textContent = num
+        ? `Épisode ${num}`
+        : extractTitle(src);
     }
 
     function populateSeries() {
@@ -220,7 +239,7 @@
           titleText.textContent = name;
           toggle(titleDD, titleArrow, false);
           seasonText.textContent = 'Sélectionnez une saison';
-          episodeText.textContent = 'Épisode 1';
+          episodeText.textContent = 'Sélectionnez un épisode';
           populateSeasons(name);
         };
         titleDD.appendChild(item);
@@ -248,9 +267,12 @@
       const list = seriesMap[currentSeries][currentSeason] || [];
       list.forEach(link => {
         const num = getEpisodeNumber(link);
+        const label = num
+          ? `Épisode ${num}`
+          : extractTitle(link);
         const item = document.createElement('div');
         item.className = 'dropdown-item';
-        item.textContent = num ? `Épisode ${num}` : 'Épisode';
+        item.textContent = label;
         item.onclick = () => {
           setVideo(link);
           toggle(episodeDD, episodeArrow, false);
@@ -262,7 +284,7 @@
 
     function toggle(menu, arrow, forceClose = null) {
       const open = menu.classList.contains('show');
-      if (forceClose===false || (forceClose===null && open)) {
+      if (forceClose === false || (forceClose === null && open)) {
         menu.classList.remove('show');
         arrow.style.transform = 'rotate(0deg)';
       } else {
@@ -271,16 +293,20 @@
       }
     }
 
-    // fermer au clic à l'extérieur
+    // Fermer au clic extérieur
     window.addEventListener('click', e => {
       if (!titleC.contains(e.target))   toggle(titleDD, titleArrow, false);
       if (!seasonC.contains(e.target))  toggle(seasonDD, seasonArrow, false);
       if (!episodeC.contains(e.target)) toggle(episodeDD, episodeArrow, false);
     });
 
-    titleC.addEventListener('click',   () => toggle(titleDD, titleArrow));
-    seasonC.addEventListener('click',  () => { if (currentSeries) toggle(seasonDD, seasonArrow); });
-    episodeC.addEventListener('click', () => { if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow); });
+    titleC .addEventListener('click', () => toggle(titleDD, titleArrow));
+    seasonC.addEventListener('click', () => {
+      if (currentSeries) toggle(seasonDD, seasonArrow);
+    });
+    episodeC.addEventListener('click', () => {
+      if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow);
+    });
 
     window.addEventListener('load', populateSeries);
   </script>
