@@ -1,379 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nayzcine Player</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lecteur MP4</title>
   <style>
-    body {
-      margin: 0;
-      background-color: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    video {
-      max-width: 100%;
-      max-height: 100%;
-      box-shadow: 0 0 20px rgba(255,255,255,0.1);
-    }
-
-    /* CONTROLS PAR DÉFAUT (desktop) */
-    #titleContainer {
-      position: fixed;
-      top: 20px; left: 20px;
-      padding: 10px 18px;
-      background: rgba(255,255,255,0.05);
-      color: #fff;
-      border-radius:12px;
-      backdrop-filter:blur(8px);
-      font-size:14px;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      transition:background 0.3s;
-      z-index:1000;
-    }
-    #rightControls {
-      position: fixed;
-      top: 20px; right: 20px;
-      display:flex;
-      gap:12px;
-      z-index:1000;
-    }
-    .selector {
-      position: relative;
-      padding:10px 18px;
-      background:rgba(255,255,255,0.05);
-      color:#fff;
-      border-radius:12px;
-      backdrop-filter:blur(8px);
-      font-size:14px;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      transition:background 0.3s;
-    }
-    .selector:hover,
-    #titleContainer:hover {
-      background:rgba(255,255,255,0.1);
-    }
-    .arrow { margin-left:8px; transition:transform 0.3s; }
-
-    .dropdown {
-      position:absolute;
-      top:calc(100% + 8px); left:0;
-      background:rgba(0,0,0,0.95);
-      border:1px solid rgba(255,255,255,0.15);
-      border-radius:10px;
-      overflow:hidden;
-      min-width:200px;
-      opacity:0;
-      transform:translateY(-10px);
-      pointer-events:none;
-      transition:opacity 0.3s,transform 0.3s;
-      z-index:999;
-    }
-    .dropdown.show {
-      opacity:1;
-      transform:translateY(0);
-      pointer-events:auto;
-    }
-    .dropdown-item {
-      padding:12px 16px;
-      color:#fff;
-      font-size:14px;
-      cursor:pointer;
-      transition:background 0.2s;
-    }
-    .dropdown-item:hover { background:rgba(255,255,255,0.08); }
-
-    /* RÈGLES POUR PETITS ÉCRANS */
-    @media (max-width: 600px) {
-      /* Centre tous les contrôles en bas */
-      #titleContainer {
-        top: auto;
-        bottom: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        padding: 8px 12px;
-        font-size: 12px;
-        justify-content: space-between;
-      }
-      #rightControls {
-        position: fixed;
-        top: auto;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        justify-content: space-around;
-        gap: 8px;
-      }
-      .selector {
-        flex: 1;
-        padding: 8px 12px;
-        font-size: 12px;
-      }
-      .dropdown {
-        min-width: auto;
-        width: 100%;
-        top: auto;
-        bottom: calc(100% + 8px);
-      }
-    }
+    :root { --bg:#0f1318; --fg:#e8eef7; --muted:#9aa5b1; --panel:#161b22; --accent:#7c5cff; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:40px auto;padding:16px}
+    .card{background:var(--panel);border:1px solid #222a33;border-radius:12px;padding:18px}
+    h1{margin:0 0 12px;font-size:20px}
+    video{width:100%;height:auto;border-radius:10px;outline:none;background:#000}
+    .status{margin-top:10px;font-size:14px;color:var(--muted)}
+    .status strong{color:#ff6b6b}
+    .src{word-break:break-all;font-size:12px;color:#7f8a98}
+    .ok{color:#7bd88f}
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Lecteur MP4 (URL autorisée uniquement)</h1>
 
-  <video id="videoPlayer" controls>
-    <source src="" type="video/mp4">
-    Votre navigateur ne supporte pas la balise vidéo.
-  </video>
+      <video id="player" controls playsinline preload="metadata"></video>
 
-  <!-- Sélecteur Série -->
-  <div id="titleContainer">
-    <span id="titleText">Sélectionnez une série/film</span>
-    <span class="arrow" id="titleArrow">&#9662;</span>
-    <div class="dropdown" id="titleDropdown"></div>
-  </div>
-
-  <!-- Sélecteurs Saison + Épisode -->
-  <div id="rightControls">
-    <div id="seasonContainer" class="selector">
-      <span id="seasonText">Sélectionnez une saison</span>
-      <span class="arrow" id="seasonArrow">&#9662;</span>
-      <div class="dropdown" id="seasonDropdown"></div>
-    </div>
-    <div id="episodeContainer" class="selector">
-      <span id="episodeText">Sélectionnez un épisode</span>
-      <span class="arrow" id="episodeArrow">&#9662;</span>
-      <div class="dropdown" id="episodeDropdown"></div>
+      <div id="status" class="status">Chargement…</div>
+      <div class="src" id="src"></div>
     </div>
   </div>
 
   <script>
-    const video       = document.getElementById('videoPlayer');
-    const titleC      = document.getElementById('titleContainer');
-    const seasonC     = document.getElementById('seasonContainer');
-    const episodeC    = document.getElementById('episodeContainer');
-    const titleText   = document.getElementById('titleText');
-    const seasonText  = document.getElementById('seasonText');
-    const episodeText = document.getElementById('episodeText');
-    const titleArrow  = document.getElementById('titleArrow');
-    const seasonArrow = document.getElementById('seasonArrow');
-    const episodeArrow= document.getElementById('episodeArrow');
-    const titleDD     = document.getElementById('titleDropdown');
-    const seasonDD    = document.getElementById('seasonDropdown');
-    const episodeDD   = document.getElementById('episodeDropdown');
+    // ⚠️ Remplace l'URL ci-dessous par une source MP4 que TU ES AUTORISÉ à servir.
+    const SOURCE_URL = "https://bac359d1e1b32ae49f4763b6a6d10f0e.r2.cloudflarestorage.com/samsung/SERIES/108978/VF/S01/01.mp4?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=e6d9f65300a6cdeb098e4cc45d0a82ab%2F20250816%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250816T210524Z&X-Amz-SignedHeaders=host&X-Amz-Expires=43200&X-Amz-Signature=c8e2c8cdc520e4ebbd6979e47cd4005c347801aea33e59f7072b5d64e915e325"; // <- bloqué hors Xalaflix
 
-    const videoLinks = [
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E01.mp4",
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E02.mp4",
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E03.mp4",
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E04.mp4",
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E05.mp4",
-      "https://cineburger.xyz/series/Squid-Game/S03/Squid-Game-S03-E06.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E01.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E02.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E03.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E04.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E05.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E06.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E07.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E08.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E09.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S01/The-Night-Agent-S01-E10.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E01.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E02.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E03.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E04.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E05.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E06.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E07.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E08.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E09.mp4",
-      "https://cineburger.xyz/series/The-Night-Agent/S02/The-Night-Agent-S02-E10.mp4",
-      "https://cineburger.xyz/movies/A-contre-sens.mp4",
-      "https://cineburger.xyz/movies/A-contre-sens-2.mp4",
-      "https://cineburger.xyz/movies/A-contre-sens-londres.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E01.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E02.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E03.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E04.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E05.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E06.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E07.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E08.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E09.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S01/Outer-Banks-S01-E010.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E01.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E02.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E03.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E04.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E05.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E06.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E07.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E08.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E09.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S02/Outer-Banks-S02-E010.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E01.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E02.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E03.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E04.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E05.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E06.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E07.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E08.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E09.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S03/Outer-Banks-S03-E010.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E01.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E02.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E03.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E04.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E05.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E06.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E07.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E08.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E09.mp4",
-      "https://cineburger.xyz/series/Outer-Banks/S04/Outer-Banks-S04-E010.mp4"
-    ];
+    const video = document.getElementById('player');
+    const statusEl = document.getElementById('status');
+    const srcEl = document.getElementById('src');
 
-    const seriesMap = {};
-    function extractTitle(url) {
-      return decodeURIComponent(
-        url.split('/').pop().replace('.mp4','').replace(/-/g,' ')
-      );
+    srcEl.textContent = SOURCE_URL;
+
+    function setStatus(msg, ok=false){
+      statusEl.textContent = msg;
+      statusEl.className = 'status' + (ok ? ' ok' : '');
     }
 
-    videoLinks.forEach(link => {
-      const parts = link.split('/');
-      const type  = parts[3]; // "series" ou "movies"
-      if (type === 'series') {
-        const rawSeries = parts[4];
-        const rawSeason = parts[5];
-        const seriesName = decodeURIComponent(rawSeries.replace(/-/g,' '));
-        const seasonNum  = parseInt(rawSeason.slice(1),10);
-        const seasonName = 'Saison ' + seasonNum;
-        seriesMap[seriesName] = seriesMap[seriesName] || {};
-        seriesMap[seriesName][seasonName] = seriesMap[seriesName][seasonName] || [];
-        seriesMap[seriesName][seasonName].push(link);
-      } else if (type === 'movies') {
-        const movieName = extractTitle(link);
-        const seasonName = 'Film';
-        seriesMap[movieName] = seriesMap[movieName] || {};
-        seriesMap[movieName][seasonName] = seriesMap[movieName][seasonName] || [];
-        seriesMap[movieName][seasonName].push(link);
-      }
+    // Tente le chargement ; si l’origine bloque (403/Cloudflare/CORS), on affiche un message clair
+    const source = document.createElement('source');
+    source.src = SOURCE_URL;
+    source.type = 'video/mp4';
+    video.appendChild(source);
+
+    video.addEventListener('loadedmetadata', () => setStatus('Source chargée. Lecture possible si autorisée.', true));
+    video.addEventListener('error', () => {
+      setStatus('Échec de lecture : la source est probablement protégée ou non autorisée depuis ce domaine.');
     });
 
-    let currentSeries = null;
-    let currentSeason = null;
-
-    function getEpisodeNumber(url) {
-      const m = url.match(/-E(\d+)\.mp4$/);
-      return m ? parseInt(m[1],10) : null;
-    }
-
-    function setVideo(src) {
-      video.src = src;
-      video.load();
-      video.play();
-      const num = getEpisodeNumber(src);
-      episodeText.textContent = num
-        ? `Épisode ${num}`
-        : extractTitle(src);
-    }
-
-    function populateSeries() {
-      titleDD.innerHTML = '';
-      Object.keys(seriesMap).forEach(name => {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = name;
-        item.onclick = () => {
-          currentSeries = name;
-          titleText.textContent = name;
-          toggle(titleDD, titleArrow, false);
-          const seasons = Object.keys(seriesMap[name]);
-          if (seasons.length === 1 && seasons[0] === 'Film') {
-            const link = seriesMap[name]['Film'][0];
-            seasonText.textContent = 'Film';
-            setVideo(link);
-            return;
-          }
-          seasonText.textContent = 'Sélectionnez une saison';
-          episodeText.textContent = 'Sélectionnez un épisode';
-          populateSeasons(name);
-        };
-        titleDD.appendChild(item);
-      });
-    }
-
-    function populateSeasons(series) {
-      seasonDD.innerHTML = '';
-      Object.keys(seriesMap[series]).forEach(season => {
-        const it = document.createElement('div');
-        it.className = 'dropdown-item';
-        it.textContent = season;
-        it.onclick = () => {
-          currentSeason = season;
-          seasonText.textContent = season;
-          toggle(seasonDD, seasonArrow, false);
-          populateEpisodes();
-        };
-        seasonDD.appendChild(it);
-      });
-    }
-
-    function populateEpisodes() {
-      episodeDD.innerHTML = '';
-      const list = seriesMap[currentSeries][currentSeason] || [];
-      list.forEach(link => {
-        const num = getEpisodeNumber(link);
-        const label = num ? `Épisode ${num}` : extractTitle(link);
-        const it = document.createElement('div');
-        it.className = 'dropdown-item';
-        it.textContent = label;
-        it.onclick = () => {
-          setVideo(link);
-          toggle(episodeDD, episodeArrow, false);
-        };
-        episodeDD.appendChild(it);
-      });
-      if (list.length) setVideo(list[0]);
-    }
-
-    function toggle(menu, arrow, forceClose = null) {
-      const open = menu.classList.contains('show');
-      if (forceClose === false || (forceClose === null && open)) {
-        menu.classList.remove('show');
-        arrow.style.transform = 'rotate(0deg)';
-      } else {
-        menu.classList.add('show');
-        arrow.style.transform = 'rotate(180deg)';
-      }
-    }
-
-    // fermer au clic extérieur
-    window.addEventListener('click', e => {
-      if (!titleC.contains(e.target))   toggle(titleDD, titleArrow, false);
-      if (!seasonC.contains(e.target))  toggle(seasonDD, seasonArrow, false);
-      if (!episodeC.contains(e.target)) toggle(episodeDD, episodeArrow, false);
-    });
-
-    titleC .addEventListener('click', () => toggle(titleDD, titleArrow));
-    seasonC.addEventListener('click', () => {
-      if (currentSeries) toggle(seasonDD, seasonArrow);
-    });
-    episodeC.addEventListener('click', () => {
-      if (currentSeries && currentSeason) toggle(episodeDD, episodeArrow);
-    });
-
-    window.addEventListener('load', populateSeries);
+    // Déclenche la tentative de lecture
+    video.load();
   </script>
 </body>
 </html>
